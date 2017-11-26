@@ -9,7 +9,7 @@
 class TestApp : public CDialog
 {
 public:					
-	BOOL TestApp::sendReceiveSerial (int COMdevice, CTestDialog *ptrDialog, char *outPacket, char *inPacket, BOOL useCRC);
+	BOOL TestApp::sendReceiveSerial (int COMdevice, char *outPacket, char *inPacket, BOOL useCRC);
 	void msDelay (int milliseconds);	
 
 	BOOL openSerialPort(const char *ptrPortName, HANDLE *ptrPortHandle);
@@ -18,25 +18,25 @@ public:
 	BOOL ReadSerialPort(HANDLE ptrPortHandle, char *ptrPacket);
 	BOOL WriteSerialPort(HANDLE ptrPortHandle, char *ptrPacket);
 	
-	UINT SystemStartUp(CTestDialog *ptrDialog);
+	UINT SystemStartUp();
 
-	BOOL InitializeTestEditBoxes(CTestDialog *ptrDialog);
+	BOOL InitializeTestEditBoxes();
 	
 	
 	void resetTestData();	
-	int  Execute(int stepNumber, CTestDialog *ptrDialog);		
-	void enableBarcodeScan(CTestDialog *ptrDialog);
-	void disableBarcodeScan(CTestDialog *ptrDialog);
+	int  Execute(int stepNumber);		
+	void enableBarcodeScan();
+	void disableBarcodeScan();
 	
-	BOOL SetPowerSupplyVoltage(CTestDialog *ptrDialog, int voltage);	
-	BOOL SetInterfaceBoardMulitplexer(CTestDialog *ptrDialog, int multiplexerSelect);
-	BOOL ReadVoltage(CTestDialog *ptrDialog, int multiplexerSelect, float *ptrLampVoltage);
+	BOOL SetPowerSupplyVoltage(int voltage);	
+	BOOL SetInterfaceBoardMulitplexer(int multiplexerSelect);
+	BOOL ReadVoltage(int multiplexerSelect, float *ptrLampVoltage);
 	float getAbs(float floatValue);
-	BOOL SetInterfaceBoardPWM(CTestDialog *ptrDialog, int PWMvalue);
-	int  RunRemoteTests(CTestDialog *ptrDialog);
-	int  RunPowerSupplyTest(CTestDialog *ptrDialog);
-	BOOL SetInhibitRelay(CTestDialog *ptrDialog, BOOL flagON);
-	BOOL SetInterfaceBoardActuatorOutput(CTestDialog *ptrDialog, BOOL actuatorClosed);
+	BOOL SetInterfaceBoardPWM(int PWMvalue);
+	int  RunRemoteTests();
+	int  RunPowerSupplyTest();
+	BOOL SetInhibitRelay(BOOL flagON);
+	BOOL SetInterfaceBoardActuatorOutput(BOOL actuatorClosed);
 	BOOL getSpreadSheetFileame(char *ptrExcelFilename);
 	BOOL createNewSpreadsheet();	
 	BOOL loadSpreadsheet();	
@@ -44,26 +44,26 @@ public:
 	BOOL writeTestResultsToSpreadsheet(int col, int testResult, char *ptrTestData);
 	BOOL CloseSpreadsheet();
 		
-	BOOL ActivateSpectrometer(CTestDialog *ptrDialog);
-	BOOL getSpectrometerConfiguration(CTestDialog *ptrDialog);
+	BOOL ActivateSpectrometer();
+	BOOL getSpectrometerConfiguration();
 	BOOL startMeasurement();
 	BOOL stopMeasurement();
 	BOOL spectrometerDataReady();
 	BOOL CloseSpectrometer();	
-	BOOL getSpectrometerData(CTestDialog *ptrDialog, float *wavelength, float *minAmplitude, float *peakIrradiance, float *FWHM, float *colorTemperature);	
+	BOOL getSpectrometerData(float *wavelength, float *minAmplitude, float *peakIrradiance, float *FWHM, float *colorTemperature);	
 	BOOL getWavelengthAndIrradiance(float *peakIrradiance, float *wavelength);	
 	BOOL getMinAmplitude(float *minAmplitude);
 	BOOL writeSpectrometerDataToFile(const char *filename);
-	int  RunSpectrometerTest(BOOL filterIsOn, CTestDialog *ptrDialog);
+	int  RunSpectrometerTest(BOOL filterIsOn);
 
-	BOOL InitializeSystem(CTestDialog *ptrDialog);
-	BOOL InitializeHP34401(CTestDialog *ptrDialog);
-	BOOL InitializeInterfaceBoard(CTestDialog *ptrDialog);
-	BOOL InitializePowerSupply(CTestDialog *ptrDialog);
-	BOOL InitializeSpectrometer(CTestDialog *ptrDialog);
+	BOOL InitializeSystem();
+	BOOL InitializeHP34401();
+	BOOL InitializeInterfaceBoard();
+	BOOL InitializePowerSupply();
+	BOOL InitializeSpectrometer();
 
-	void ClearLog(CTestDialog *ptrDialog);
-	int  TTL_inputTest(CTestDialog *ptrDialog);	
+	void ClearLog();
+	int  TTL_inputTest();	
 	void ConfigureFont(CFont &ptrFont, int fontHeight, int fontWidth, BOOL flgBold);
 	BOOL InitializeFonts();
 
@@ -72,26 +72,18 @@ public:
 
 	TestStep testStep[TOTAL_STEPS];		
 	CFont BigFont, SmallFont, MidFont;	
-	
-	//const char *portNameInterfaceBoard = "COM8";
-	//const char *portNameMultiMeter = "\\\\.\\COM3";
-	//const char *portNameACpowerSupply = "\\\\.\\COM19";
-	// CTestDialog *ptrDialog;
-			
-	//const char *portNameInterfaceBoard = "COM3";
-	//const char *portNameACpowerSupply = "COM4";
-	//const char *portNameMultiMeter = "COM6";
+	CTestDialog *ptrDialog;
 
 	BOOL InitializeDisplayText();
-	void DisplayLog(char *newString, CTestDialog *ptrDialog);
-	BOOL DisplayTestEditBox(CTestDialog *ptrDialog, int boxNumber, int passFailStatus);	
-	void DisplayIntructions(int stepNumber, CTestDialog *ptrDialog);	
-	void DisplayPassFailStatus(int stepNumber, int subStepNumber, CTestDialog *ptrDialog);
-	void DisplayStatusBarText(CTestDialog *ptrDialog, int panel, LPCTSTR strText);
-	void DisplaySerialComData(CTestDialog *ptrDialog, int comDirection, char *strData);
-	void DisplayText(CTestDialog *ptrDialog, int lineNumber, char *strText);	
-	void DisplayStepNumber(CTestDialog *ptrDialog, int stepNumber);			
-	void resetDisplays(CTestDialog *ptrDialog);
+	void DisplayLog(char *newString);
+	BOOL DisplayTestEditBox(int boxNumber, int passFailStatus);	
+	void DisplayIntructions(int stepNumber);	
+	void DisplayPassFailStatus(int stepNumber, int subStepNumber);
+	void DisplayStatusBarText(int panel, LPCTSTR strText);
+	void DisplaySerialComData(int comDirection, char *strData);
+	void DisplayText(int lineNumber, char *strText);	
+	void DisplayStepNumber(int stepNumber);			
+	void resetDisplays();
 	BOOL DisplayMessageBox(char *strTopLine, char *strBottomLine, int boxType);
 
 	void writeBinaryFile(std::ostream& out, float value);
@@ -100,7 +92,8 @@ public:
 	// void write(std::ostream& out, long value);	// Write binary long value
 	// void read(std::istream& in, long& value);	// Read binary long value	
 
-	TestApp(CWnd* pParent = NULL);	// standard constructor
+	// TestApp(CWnd* pParent = NULL);	// standard constructor
+	TestApp::TestApp(CWnd* pParent = NULL);
 	~TestApp();
 };
 

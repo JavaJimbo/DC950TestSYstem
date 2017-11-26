@@ -76,7 +76,7 @@ void TestApp::ConfigureFont(CFont &ptrFont, int fontHeight, int fontWidth, BOOL 
 		return TRUE;
 	}
 
-	BOOL TestApp::DisplayTestEditBox(CTestDialog *ptrDialog, int boxNumber, int passFailStatus){
+	BOOL TestApp::DisplayTestEditBox(int boxNumber, int passFailStatus){
 		char TestEditBoxText[MAXSTRING];
 
 		if (boxNumber >= NUM_TEST_EDIT_BOXES) return FALSE;
@@ -106,7 +106,7 @@ void TestApp::ConfigureFont(CFont &ptrFont, int fontHeight, int fontWidth, BOOL 
 		return TRUE;
 	}
 
-	BOOL TestApp::InitializeTestEditBoxes(CTestDialog *ptrDialog)
+	BOOL TestApp::InitializeTestEditBoxes()
 	{
 		arrayEditBoxTest[0] = &ptrDialog->m_EditBox_Test1;
 		arrayEditBoxTest[1] = &ptrDialog->m_EditBox_Test2;
@@ -121,7 +121,7 @@ void TestApp::ConfigureFont(CFont &ptrFont, int fontHeight, int fontWidth, BOOL 
 		return TRUE;
 	}
 
-	void TestApp::resetDisplays(CTestDialog *ptrDialog) {
+	void TestApp::resetDisplays() {
 		ptrDialog->m_BarcodeEditBox.SetWindowText((LPCTSTR)"");
 		ptrDialog->m_static_TestResult.SetWindowText((LPCTSTR)"");
 		ptrDialog->m_static_TestName.SetWindowText((LPCTSTR)"New Unit");
@@ -137,7 +137,7 @@ void TestApp::ConfigureFont(CFont &ptrFont, int fontHeight, int fontWidth, BOOL 
 		ptrDialog->m_static_modelGroup.EnableWindow(TRUE);
 		ptrDialog->m_static_BarcodeLabel.ShowWindow(TRUE);
 		if (ptrDialog->enableAdmin == FALSE) ptrDialog->m_static_ButtonAdmin.ShowWindow(FALSE);
-		enableBarcodeScan(ptrDialog);
+		enableBarcodeScan();
 		InitializeDisplayText();
 
 		ptrDialog->m_EditBox_Test1.EnableWindow(TRUE);
@@ -151,7 +151,7 @@ void TestApp::ConfigureFont(CFont &ptrFont, int fontHeight, int fontWidth, BOOL 
 		ptrDialog->m_EditBox_Test9.EnableWindow(TRUE);
 		ptrDialog->m_EditBox_Test10.EnableWindow(TRUE);
 
-		for (int i = 0; i < NUM_TEST_EDIT_BOXES; i++)  DisplayTestEditBox(ptrDialog, i, NOT_DONE_YET);
+		for (int i = 0; i < NUM_TEST_EDIT_BOXES; i++)  DisplayTestEditBox(i, NOT_DONE_YET);
 	}
 
 	BOOL TestApp::InitializeDisplayText() {	
@@ -392,13 +392,13 @@ void TestApp::ConfigureFont(CFont &ptrFont, int fontHeight, int fontWidth, BOOL 
 		return TRUE;
 	}
 	
-	void TestApp::DisplaySerialComData(CTestDialog *ptrDialog, int comDirection, char *strData) {
+	void TestApp::DisplaySerialComData(int comDirection, char *strData) {
 		if (comDirection == DATAIN) ptrDialog->m_static_DataIn.SetWindowText((LPCTSTR)(LPCTSTR) strData);
 		else ptrDialog->m_static_DataOut.SetWindowText((LPCTSTR)(LPCTSTR)strData);
 	}
 
 	// Displays user instructions for each test, and enables/disables buttons as needed		
-	void TestApp::DisplayIntructions(int stepNumber, CTestDialog *ptrDialog){	
+	void TestApp::DisplayIntructions(int stepNumber){	
 		char *ptrText = NULL;
 
 		// Once STARTUP is done, change "READY" to "ENTER" text on button:
@@ -428,7 +428,7 @@ void TestApp::ConfigureFont(CFont &ptrFont, int fontHeight, int fontWidth, BOOL 
 		ptrDialog->m_static_ButtonHalt.EnableWindow(testStep[stepNumber].enableHALT);
 	}
 		
-	void TestApp::DisplayText(CTestDialog *ptrDialog, int lineNumber, char *strText) {
+	void TestApp::DisplayText(int lineNumber, char *strText) {
 		switch (lineNumber) {
 		case 1:
 			ptrDialog->m_static_Line1.SetWindowText((LPCTSTR)strText);
@@ -479,23 +479,23 @@ void TestApp::ConfigureFont(CFont &ptrFont, int fontHeight, int fontWidth, BOOL 
 		return tryAgain;
 	}
 		
-	void TestApp::enableBarcodeScan(CTestDialog *ptrDialog) {		
+	void TestApp::enableBarcodeScan() {		
 		ptrDialog->m_BarcodeEditBox.SetFocus();
 		ptrDialog->m_BarcodeEditBox.ShowCaret();
 		ptrDialog->m_BarcodeEditBox.SendMessage(EM_SETREADONLY, 0, 0);
 	}
 
-	void TestApp::disableBarcodeScan(CTestDialog *ptrDialog) {
+	void TestApp::disableBarcodeScan() {
 		ptrDialog->m_BarcodeEditBox.SendMessage(EM_SETREADONLY, 1, 0);
 	}
 
-	void TestApp::DisplayStepNumber(CTestDialog *ptrDialog, int stepNumber) {
+	void TestApp::DisplayStepNumber(int stepNumber) {
 		char strStepNumber[16];
 		sprintf_s(strStepNumber, "Step #%d", stepNumber);
 		ptrDialog->m_static_Line6.SetWindowText((LPCTSTR)strStepNumber);
 	}
 
-void TestApp::DisplayPassFailStatus(int stepNumber, int subStepNumber, CTestDialog *ptrDialog) {
+void TestApp::DisplayPassFailStatus(int stepNumber, int subStepNumber) {
 		if (stepNumber > STARTUP && stepNumber < FINAL_PASS) {
 			if (testStep[stepNumber].Status == PASS) {
 				ptrDialog->m_static_TestName.SetWindowText((LPCTSTR)testStep[stepNumber].testName);
@@ -520,14 +520,14 @@ void TestApp::DisplayPassFailStatus(int stepNumber, int subStepNumber, CTestDial
 		}
 	}
 
-	void TestApp::ClearLog(CTestDialog *ptrDialog){
+	void TestApp::ClearLog(){
 		arrTestLog[0] = '\0';
 		ptrDialog->m_EditBox_Log.SetWindowText(arrTestLog);
 		ptrDialog->pEdit->LineScroll (ptrDialog->pEdit->GetLineCount());
 	}
 	
 
-	void TestApp::DisplayLog(char *newString, CTestDialog *ptrDialog){		
+	void TestApp::DisplayLog(char *newString){		
 		strcat_s(arrTestLog, MAXLOG, newString);
 		ptrDialog->m_EditBox_Log.SetWindowText(arrTestLog);
 		ptrDialog->pEdit->LineScroll (ptrDialog->pEdit->GetLineCount());			

@@ -143,7 +143,7 @@ BOOL TestApp::openSerialPort (const char *ptrPortName, HANDLE *ptrPortHandle) {
 		else return (TRUE);		
 	}
 	
-	BOOL TestApp::sendReceiveSerial(int COMdevice, CTestDialog *ptrDialog, char *outPacket, char *inPacket, BOOL expectReply)
+	BOOL TestApp::sendReceiveSerial(int COMdevice,  char *outPacket, char *inPacket, BOOL expectReply)
 	{
 		HANDLE ptrPortHandle = NULL;
 
@@ -164,16 +164,16 @@ BOOL TestApp::openSerialPort (const char *ptrPortName, HANDLE *ptrPortHandle) {
 			return (FALSE);
 		}
 
-		DisplaySerialComData(ptrDialog, DATAOUT, outPacket);
+		DisplaySerialComData(DATAOUT, outPacket);
 		if (COMdevice == INTERFACE_BOARD) 
 			CRCcalculate(outPacket, TRUE);
 
 		if (outPacket == NULL) return (FALSE);
 
-		DisplaySerialComData(ptrDialog, DATAIN, "");
+		DisplaySerialComData(DATAIN, "");
 
 		if (!WriteSerialPort(ptrPortHandle, outPacket)) {
-			DisplaySerialComData(ptrDialog, DATAOUT, "COM PORT ERROR");
+			DisplaySerialComData(DATAOUT, "COM PORT ERROR");
 			return (FALSE);
 		}
 
@@ -185,17 +185,17 @@ BOOL TestApp::openSerialPort (const char *ptrPortName, HANDLE *ptrPortHandle) {
 		}
 
 		if (!ReadSerialPort(ptrPortHandle, inPacket)) {
-			DisplaySerialComData(ptrDialog, DATAIN, "COM PORT ERROR");
+			DisplaySerialComData(DATAIN, "COM PORT ERROR");
 			return (FALSE);
 		}
 
 		if (COMdevice == INTERFACE_BOARD) {
 			if (!CRCcheck(inPacket)) {
-				DisplaySerialComData(ptrDialog, DATAIN, "DATA IN CRC ERROR");
+				DisplaySerialComData(DATAIN, "DATA IN CRC ERROR");
 				return (FALSE);
 			}			
 		}
-		DisplaySerialComData(ptrDialog, DATAIN, inPacket);
+		DisplaySerialComData(DATAIN, inPacket);
 		return (TRUE);		
 	}
 

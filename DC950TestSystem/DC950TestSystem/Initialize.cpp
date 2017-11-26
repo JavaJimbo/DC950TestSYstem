@@ -54,23 +54,23 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 	
 	// This is called once, when ENTER button
 	// has been pushed the first time.
-	UINT TestApp::SystemStartUp(CTestDialog *ptrDialog)  
+	UINT TestApp::SystemStartUp()  
 	{
-		if (!InitializeSystem(ptrDialog)) return (FAIL);		
+		if (!InitializeSystem()) return (FAIL);		
 		else {			
-			resetDisplays(ptrDialog);			
+			resetDisplays();			
 			return (PASS);
 		}
 	}
 
 
-	BOOL TestApp::InitializeHP34401(CTestDialog *ptrDialog) {
+	BOOL TestApp::InitializeHP34401() {
 		char strReset[BUFFERSIZE] = "*RST\r\n";
 		char strEnableRemote[BUFFERSIZE] = ":SYST:REM\r\n";
 		char strMeasure[BUFFERSIZE] = ":MEAS?\r\n";
 
 		// 1) Send RESET command to HP34401:
-		if (!sendReceiveSerial(HP_METER, ptrDialog, strReset, NULL, FALSE)) {
+		if (!sendReceiveSerial(HP_METER, strReset, NULL, FALSE)) {
 			DisplayMessageBox("HP MULTIMETER COM ERROR", "Make sure meter power is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
@@ -78,7 +78,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		msDelay(500);
 
 		// 2) Enable RS232 remote control on HP34401:
-		if (!sendReceiveSerial(HP_METER, ptrDialog, strEnableRemote, NULL, FALSE)) {
+		if (!sendReceiveSerial(HP_METER, strEnableRemote, NULL, FALSE)) {
 			DisplayMessageBox("HP MULTIMETER COM ERROR", "Make sure meter power is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
@@ -86,7 +86,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		msDelay(500);
 
 		// Now try getting a measurement from the HP34401:
-		if (!sendReceiveSerial(HP_METER, ptrDialog, strMeasure, NULL, TRUE)) {
+		if (!sendReceiveSerial(HP_METER, strMeasure, NULL, TRUE)) {
 			DisplayMessageBox("HP MULTIMETER COM ERROR", "Make sure meter power is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
@@ -94,12 +94,12 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		return TRUE;
 	}
 
-	BOOL TestApp::InitializeInterfaceBoard(CTestDialog *ptrDialog) {
+	BOOL TestApp::InitializeInterfaceBoard() {
 		char strReset[BUFFERSIZE] = "$RESET";
 		char strResponse[BUFFERSIZE] = "";
 
 		// Send RESET command to interface board:
-		if (!sendReceiveSerial(INTERFACE_BOARD, ptrDialog, strReset, strResponse, TRUE)) {
+		if (!sendReceiveSerial(INTERFACE_BOARD, strReset, strResponse, TRUE)) {
 			DisplayMessageBox("INTERFACE BOARD COM ERROR", "Make sure Interface board power is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
@@ -110,40 +110,40 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		return TRUE;
 	}
 
-	BOOL TestApp::InitializePowerSupply(CTestDialog *ptrDialog) {
+	BOOL TestApp::InitializePowerSupply() {
 		char strCommand[BUFFERSIZE] = "*RST\r";
 
 		// Send RESET commands to programmable power supply:
 		strcpy_s(strCommand, BUFFERSIZE, "*RST\r\n");
-		if (!sendReceiveSerial(AC_POWER_SUPPLY, ptrDialog, strCommand, NULL, FALSE)) {
+		if (!sendReceiveSerial(AC_POWER_SUPPLY, strCommand, NULL, FALSE)) {
 			DisplayMessageBox("AC POWER SUPPLY COM ERROR", "Make sure AC power supply is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}		
 		msDelay(1000);
 		
 		strcpy_s(strCommand, BUFFERSIZE, "*CLS\r\n");
-		if (!sendReceiveSerial(AC_POWER_SUPPLY, ptrDialog, strCommand, NULL, FALSE)) {
+		if (!sendReceiveSerial(AC_POWER_SUPPLY, strCommand, NULL, FALSE)) {
 			DisplayMessageBox("AC POWER SUPPLY COM ERROR", "Make sure AC power supply is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
 		msDelay(1000);
 
 		strcpy_s(strCommand, BUFFERSIZE, "*SRE 128\r\n");
-		if (!sendReceiveSerial(AC_POWER_SUPPLY, ptrDialog, strCommand, NULL, FALSE)) {
+		if (!sendReceiveSerial(AC_POWER_SUPPLY, strCommand, NULL, FALSE)) {
 			DisplayMessageBox("AC POWER SUPPLY COM ERROR", "Make sure AC power supply is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
 		msDelay(1000);
 
 		strcpy_s(strCommand, BUFFERSIZE, "*ESE 0\r\n");
-		if (!sendReceiveSerial(AC_POWER_SUPPLY, ptrDialog, strCommand, NULL, FALSE)) {
+		if (!sendReceiveSerial(AC_POWER_SUPPLY, strCommand, NULL, FALSE)) {
 			DisplayMessageBox("AC POWER SUPPLY COM ERROR", "Make sure AC power supply is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
 		msDelay(1000);		
 
 		strcpy_s(strCommand, BUFFERSIZE, "VOLT:RANG 272\r\n");
-		if (!sendReceiveSerial(AC_POWER_SUPPLY, ptrDialog, strCommand, NULL, FALSE)) {
+		if (!sendReceiveSerial(AC_POWER_SUPPLY, strCommand, NULL, FALSE)) {
 			DisplayMessageBox("AC POWER SUPPLY COM ERROR", "Make sure AC power supply is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
@@ -151,7 +151,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		msDelay(1000);
 
 		strcpy_s(strCommand, BUFFERSIZE, "OUTP 1\r\n");
-		if (!sendReceiveSerial(AC_POWER_SUPPLY, ptrDialog, strCommand, NULL, FALSE)) {
+		if (!sendReceiveSerial(AC_POWER_SUPPLY, strCommand, NULL, FALSE)) {
 			DisplayMessageBox("AC POWER SUPPLY COM ERROR", "Make sure AC power supply is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
@@ -159,7 +159,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		msDelay(1000);
 
 		strcpy_s(strCommand, BUFFERSIZE, "SYST:REM\r\n");
-		if (!sendReceiveSerial(AC_POWER_SUPPLY, ptrDialog, strCommand, NULL, FALSE)) {
+		if (!sendReceiveSerial(AC_POWER_SUPPLY, strCommand, NULL, FALSE)) {
 			DisplayMessageBox("AC POWER SUPPLY COM ERROR", "Make sure AC power supply is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}		
@@ -167,7 +167,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		msDelay(1000);
 
 		strcpy_s(strCommand, BUFFERSIZE, "VOLT 120\r\n");
-		if (!sendReceiveSerial(AC_POWER_SUPPLY, ptrDialog, strCommand, NULL, FALSE)) {
+		if (!sendReceiveSerial(AC_POWER_SUPPLY, strCommand, NULL, FALSE)) {
 			DisplayMessageBox("AC POWER SUPPLY COM ERROR", "Make sure AC power supply is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
@@ -179,7 +179,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 	}
 	
 	
-	BOOL TestApp::InitializeSystem(CTestDialog *ptrDialog) {
+	BOOL TestApp::InitializeSystem() {
 		char portNameInterfaceBoard[MAXSTRING], portNameACpowerSupply[MAXSTRING], portNameMultiMeter[MAXSTRING];
 		
 		portNumberInterfaceBoard = (long) arrINIconfigValues[0];
@@ -203,12 +203,12 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 			&& openSerialPort(portNameACpowerSupply, &handleACpowerSupply)) {
 			ptrDialog->m_static_DataOut.SetWindowText((LPCTSTR)"COM Data Out");
 			ptrDialog->m_static_DataIn.SetWindowText((LPCTSTR)"COM Data In");			
-			if (!InitializeHP34401(ptrDialog)) return FALSE;
-			if (!InitializeInterfaceBoard(ptrDialog)) return FALSE;
+			if (!InitializeHP34401()) return FALSE;
+			if (!InitializeInterfaceBoard()) return FALSE;
 			
 #ifndef SIMULMODE
-			if (!InitializePowerSupply(ptrDialog)) return FALSE;			
-			if (!InitializeSpectrometer(ptrDialog)) return FALSE:
+			if (!InitializePowerSupply()) return FALSE;			
+			if (!InitializeSpectrometer()) return FALSE:
 #endif			
 			return TRUE;
 		}

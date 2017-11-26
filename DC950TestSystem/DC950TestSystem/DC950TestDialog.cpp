@@ -1,7 +1,8 @@
 /*  Project: DC950TestSystem
 *   DC950TestDialog.cpp - implementation file for main dialog box 
 *
- */
+*	11-26-17 JBS: Converted *ptrDialog to global, removed from all headers.
+*/
 #include "stdafx.h"
 #include "DC950Test.h"
 #include "DC950TestDialog.h"
@@ -29,7 +30,6 @@ using namespace ExcelFormat;
 TestApp MyTestApp;	
 CString m_ToAdd;
 long testCount = 16;
-
 
 // Dialog deconstructor: shut down system 
 CTestDialog::~CTestDialog() {	
@@ -131,17 +131,12 @@ void CTestDialog::OnBtnClickedPrevious()
 		stepType = MyTestApp.testStep[stepNumber].stepType;
 	} while (stepType == AUTO);
 
-	if (stepNumber == 1) MyTestApp.resetDisplays(this); 
+	if (stepNumber == 1) MyTestApp.resetDisplays(); 
 	
-	MyTestApp.DisplayStepNumber(this, stepNumber);
-	MyTestApp.DisplayIntructions(stepNumber, this);
-	MyTestApp.DisplayPassFailStatus(stepNumber, 0, this);
+	MyTestApp.DisplayStepNumber(stepNumber);
+	MyTestApp.DisplayIntructions(stepNumber);
+	MyTestApp.DisplayPassFailStatus(stepNumber, 0);
 }
-
-
-
-
-
 
 
 BOOL CTestDialog::PreTranslateMessage(MSG* pMsg)
@@ -163,7 +158,8 @@ BOOL CTestDialog::PreTranslateMessage(MSG* pMsg)
 BOOL CTestDialog::OnInitDialog()
 {	
 	CDialog::OnInitDialog();	
-	
+	MyTestApp.ptrDialog = this;
+
 	enableAdmin = FALSE;
 	pEdit = (CEdit*) GetDlgItem(IDC_EDIT_LOG);
 	MyTestApp.InitializeFonts();
@@ -180,21 +176,18 @@ BOOL CTestDialog::OnInitDialog()
 	stepNumber = 0;
 	subStepNumber = 0;	
 	MyTestApp.InitializeDisplayText();
-	MyTestApp.DisplayIntructions(stepNumber, this);
+	MyTestApp.DisplayIntructions(stepNumber);
 	
 	// MyTestApp.DisplayStepNumber(this, stepNumber);
 	m_static_optStandard.SetCheck(TRUE);
 	m_static_optFilter.SetCheck(FALSE);
-
-	// MyTestApp.ptrDialog = this;
-	
+		
 	m_EditBox_Log.SetLimitText(MAXLOG); 	
-	MyTestApp.InitializeTestEditBoxes(this);
+	MyTestApp.InitializeTestEditBoxes();
 	MyTestApp.load_INI_File();
 	// m_DialogBackground.SetBackColor(RGB(0,255,255));
 	
 	MyTestApp.loadSpreadsheet(); 
-
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -208,12 +201,12 @@ void CTestDialog::OnBtnClickedHalt()
 
 void CTestDialog::OnBtnClickedRadioSTD()
 {
-	MyTestApp.enableBarcodeScan(this);
+	MyTestApp.enableBarcodeScan();
 }
 
 void CTestDialog::OnBtnClickedRadioFilter()
 {
-	MyTestApp.enableBarcodeScan(this);
+	MyTestApp.enableBarcodeScan();
 }
 
 void CTestDialog::OnBtnClickedEnter() {
@@ -238,8 +231,8 @@ void CTestDialog::OnBtnClickedFail()
 void CTestDialog::Testhandler()
 {
 		// Execute test step and display result:
-		int testResult = MyTestApp.Execute(stepNumber, this);
-		MyTestApp.DisplayPassFailStatus(stepNumber, subStepNumber, this);
+		int testResult = MyTestApp.Execute(stepNumber);
+		MyTestApp.DisplayPassFailStatus(stepNumber, subStepNumber);
 
 		if (testResult == PASS || testResult == FAIL) {
 			subStepNumber = 0;
@@ -286,11 +279,11 @@ void CTestDialog::Testhandler()
 		}
 
 		// Now display next step:
-		MyTestApp.DisplayIntructions(stepNumber, this);
-		MyTestApp.DisplayStepNumber(this, stepNumber);		
+		MyTestApp.DisplayIntructions(stepNumber);
+		MyTestApp.DisplayStepNumber(stepNumber);		
 
-		if (stepNumber == 1) MyTestApp.resetDisplays(this);// MyTestApp.enableBarcodeScan(this);
-		else MyTestApp.disableBarcodeScan(this);
+		if (stepNumber == 1) MyTestApp.resetDisplays();// MyTestApp.enableBarcodeScan(this);
+		else MyTestApp.disableBarcodeScan();
 
 		// Now wait for user to hit ENTER
 		// or timer to call this routine and execute new step

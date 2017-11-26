@@ -55,19 +55,19 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		CloseHandle(gDoneEvent);
 	}
 				
-	BOOL TestApp::ReadVoltage(CTestDialog *ptrDialog, int multiplexerSelect, float *ptrMeasuredVoltage)
+	BOOL TestApp::ReadVoltage(int multiplexerSelect, float *ptrMeasuredVoltage)
 	{
 		char strResponse[BUFFERSIZE] = "";
 		char strReadVoltage[BUFFERSIZE] = ":MEAS?\r\n";		
 		float floatVoltage;
 
 		// Set relays on interface board for desired voltage source:
-		if (!SetInterfaceBoardMulitplexer(ptrDialog, multiplexerSelect)) return FALSE;
+		if (!SetInterfaceBoardMulitplexer(multiplexerSelect)) return FALSE;
 
 		msDelay(500);
 
 		// Send READ VOLTAGE command to multimeter and get response:
-		if (!sendReceiveSerial(HP_METER, ptrDialog, strReadVoltage, strResponse, TRUE)) {
+		if (!sendReceiveSerial(HP_METER, strReadVoltage, strResponse, TRUE)) {
 			DisplayMessageBox("HP METER COM ERROR", "Make sure AC power supply is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
@@ -80,7 +80,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		return TRUE;
 	}
 		
-	BOOL TestApp::SetInterfaceBoardMulitplexer(CTestDialog *ptrDialog, int multiplexerSelect)
+	BOOL TestApp::SetInterfaceBoardMulitplexer(int multiplexerSelect)
 	{
 		char strCommand[BUFFERSIZE];
 		char strResponse[BUFFERSIZE];
@@ -99,7 +99,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		}
 
 		// Send RESET command to interface board:
-		if (!sendReceiveSerial(INTERFACE_BOARD, ptrDialog, strCommand, strResponse, TRUE)) {
+		if (!sendReceiveSerial(INTERFACE_BOARD, strCommand, strResponse, TRUE)) {
 			DisplayMessageBox("INTERFACE BOARD COM ERROR", "Make sure Interface board power is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
@@ -110,7 +110,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		return TRUE;
 	}
 
-	BOOL TestApp::SetInterfaceBoardPWM(CTestDialog *ptrDialog, int PWMvalue)
+	BOOL TestApp::SetInterfaceBoardPWM(int PWMvalue)
 	{
 		char strCommand[BUFFERSIZE] = "$PWM>";
 		char strValue[BUFFERSIZE], strResponse[BUFFERSIZE];
@@ -119,7 +119,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		strcat_s(strCommand, BUFFERSIZE, strValue);
 
 		// Send SET PWM command to interface board:
-		if (!sendReceiveSerial(INTERFACE_BOARD, ptrDialog, strCommand, strResponse, TRUE)) {
+		if (!sendReceiveSerial(INTERFACE_BOARD, strCommand, strResponse, TRUE)) {
 			DisplayMessageBox("INTERFACE BOARD COM ERROR", "Make sure Interface board power is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
@@ -131,7 +131,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 	}
 	
 
-	BOOL TestApp::SetInhibitRelay(CTestDialog *ptrDialog, BOOL flagON)
+	BOOL TestApp::SetInhibitRelay(BOOL flagON)
 	{
 		char strCommand[BUFFERSIZE];
 		char strResponse[BUFFERSIZE];
@@ -140,7 +140,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		else strcpy_s(strCommand, BUFFERSIZE, "$INHIBIT>OFF");
 
 		// Send RESET command to interface board:
-		if (!sendReceiveSerial(INTERFACE_BOARD, ptrDialog, strCommand, strResponse, TRUE)) {
+		if (!sendReceiveSerial(INTERFACE_BOARD, strCommand, strResponse, TRUE)) {
 			DisplayMessageBox("INTERFACE BOARD COM ERROR", "Make sure Interface board power is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
@@ -153,7 +153,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 	
 
 
-	BOOL TestApp::SetPowerSupplyVoltage(CTestDialog *ptrDialog, int commandVoltage) {
+	BOOL TestApp::SetPowerSupplyVoltage(int commandVoltage) {
 		char strCommand[BUFFERSIZE];
 		char strResponse[BUFFERSIZE] = "";
 		char strReadVoltage[BUFFERSIZE] = "MEAS:VOLT?\r\n";		
@@ -165,7 +165,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
     	  // Send SET VOLTAGE command:
 		sprintf_s(strCommand, "VOLT %d\r\n", commandVoltage);
 
-		if (!sendReceiveSerial(AC_POWER_SUPPLY, ptrDialog, strCommand, NULL, FALSE)) {
+		if (!sendReceiveSerial(AC_POWER_SUPPLY, strCommand, NULL, FALSE)) {
 			DisplayMessageBox("AC POWER SUPPLY COM ERROR", "Make sure AC power supply is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
@@ -174,20 +174,20 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		return TRUE;
 	}
 
-	BOOL TestApp::SetInterfaceBoardActuatorOutput(CTestDialog *ptrDialog, BOOL actuatorClosed)
+	BOOL TestApp::SetInterfaceBoardActuatorOutput(BOOL actuatorClosed)
 	{
 		char strCommand[BUFFERSIZE] = "$TTL_HIGH";
 		char strInputCommand[BUFFERSIZE] = "$TTL_IN";
 		char strResponse[BUFFERSIZE];
 
-		SetInterfaceBoardPWM(ptrDialog, MAX_PWM);
+		SetInterfaceBoardPWM(MAX_PWM);
 		msDelay(100);
 
 		if (actuatorClosed == TRUE) strcpy_s(strCommand, BUFFERSIZE, "$TTL_LOW");
 		else strcpy_s(strCommand, BUFFERSIZE, "$TTL_HIGH"); 
 
 		// Send SET PWM command to interface board:
-		if (!sendReceiveSerial(INTERFACE_BOARD, ptrDialog, strCommand, strResponse, TRUE)) {
+		if (!sendReceiveSerial(INTERFACE_BOARD, strCommand, strResponse, TRUE)) {
 			DisplayMessageBox("INTERFACE BOARD COM ERROR", "Make sure Interface board power is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}
@@ -197,7 +197,7 @@ extern HANDLE handleInterfaceBoard, handleHPmultiMeter, handleACpowerSupply;
 		}
 
 		// Check TTL input for actuator fault detect:
-		if (!sendReceiveSerial(INTERFACE_BOARD, ptrDialog, strInputCommand, strResponse, TRUE)) {
+		if (!sendReceiveSerial(INTERFACE_BOARD, strInputCommand, strResponse, TRUE)) {
 			DisplayMessageBox("INTERFACE BOARD COM ERROR", "Make sure Interface board power is ON, \r\nCheck RS232 and USB cables", 1);
 			return FALSE;
 		}

@@ -38,7 +38,7 @@ void clearDataArrays() {
 	}
 }
 
-BOOL TestApp::InitializeSpectrometer(CTestDialog *ptrDialog) {	
+BOOL TestApp::InitializeSpectrometer() {	
 	long l_Port = 0;	
 	unsigned int        l_Size = 0;
 	unsigned int        l_RequiredSize = 0;
@@ -77,7 +77,7 @@ BOOL TestApp::InitializeSpectrometer(CTestDialog *ptrDialog) {
 	return FALSE;
 }
 
-BOOL TestApp::ActivateSpectrometer(CTestDialog *ptrDialog) {
+BOOL TestApp::ActivateSpectrometer() {
 
 #ifdef SIMULMODE 
 	return TRUE;
@@ -88,12 +88,12 @@ BOOL TestApp::ActivateSpectrometer(CTestDialog *ptrDialog) {
 	if (newHandle == INVALID_AVS_HANDLE_VALUE) return FALSE;
 	else handleSpectrometer = newHandle;
 
-	if (getSpectrometerConfiguration(ptrDialog)) return TRUE;
+	if (getSpectrometerConfiguration()) return TRUE;
 	else return FALSE;
 }
 
 
-BOOL TestApp::getSpectrometerConfiguration(CTestDialog *ptrDialog) {
+BOOL TestApp::getSpectrometerConfiguration() {
 	DeviceConfigType* l_pDeviceData = NULL;
 	unsigned short intNumberOfPixels = 0;
 	unsigned int l_Size;
@@ -111,9 +111,9 @@ BOOL TestApp::getSpectrometerConfiguration(CTestDialog *ptrDialog) {
 
 	if (ERR_SUCCESS == l_Res)
 	{		
-		DisplayText(ptrDialog, 1, a_Fpga);
-		DisplayText(ptrDialog, 1, a_As5216);
-		DisplayText(ptrDialog, 1, a_Dll);
+		DisplayText(1, a_Fpga);
+		DisplayText(1, a_As5216);
+		DisplayText(1, a_Dll);
 	}
 
 	if (ERR_SUCCESS == AVS_GetNumPixels(handleSpectrometer, &intNumberOfPixels))
@@ -325,7 +325,7 @@ BOOL TestApp::writeSpectrometerDataToFile(const char *filename)
 
 
 
-BOOL TestApp::getSpectrometerData(CTestDialog *ptrDialog, float *wavelength, float *minAmplitude, float *peakIrradiance, float *FWHM, float *colorTemperature) {
+BOOL TestApp::getSpectrometerData(float *wavelength, float *minAmplitude, float *peakIrradiance, float *FWHM, float *colorTemperature) {
 #ifdef SIMULMODE
 	return TRUE;
 #endif
@@ -340,21 +340,21 @@ BOOL TestApp::getSpectrometerData(CTestDialog *ptrDialog, float *wavelength, flo
 
 		char strText[MAXSTRING];
 		sprintf_s(strText, MAXSTRING, "Peak Irradiance: %.2f", *peakIrradiance);
-		DisplayText(ptrDialog, 2, strText);
+		DisplayText(2, strText);
 
 		sprintf_s(strText, MAXSTRING, "Wavelength: %.2f", *wavelength);
-		DisplayText(ptrDialog, 3, strText);
+		DisplayText(3, strText);
 
 		sprintf_s(strText, MAXSTRING, "Min amplitude: %.2f", *minAmplitude);
-		DisplayText(ptrDialog, 4, strText);
+		DisplayText(4, strText);
 
 		*FWHM = 14;
 		sprintf_s(strText, MAXSTRING, "FWHM: %.2f", *FWHM);
-		DisplayText(ptrDialog, 4, strText);
+		DisplayText(4, strText);
 
 		*colorTemperature = 123;
 		sprintf_s(strText, MAXSTRING, "ColorTemperature: %.2f", *FWHM);
-		DisplayText(ptrDialog, 5, strText);
+		DisplayText(5, strText);
 
 		return TRUE;
 	}

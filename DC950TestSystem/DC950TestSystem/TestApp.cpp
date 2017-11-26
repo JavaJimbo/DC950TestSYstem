@@ -36,8 +36,6 @@ float MaxOpenColorTemp = (float) 200.0;
 float MinOpenIrradiance = (float) 200.0;
 float MaxOpenIrradiance = (float) 300.0;
 
-
-
 const char *INIfilename = "C:\\DC950_Data\\INIfile.bin";
 float arrINIconfigValues[MAXINIVALUES];
 long portNumberInterfaceBoard = 3, portNumberACpowerSupply = 4, portNumberMultiMeter = 7;
@@ -47,7 +45,7 @@ float wavelength = 940, minAmplitude = 5, peakIrradiance = 250, FWHM = 14, color
 int currentRow = 0;
 HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupply = NULL;
 
-
+	// CONSTRUCTORS FOR TestApp
 	TestApp::~TestApp() {
 	}
 
@@ -55,18 +53,29 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 	}
 
 	
-	int TestApp::RunPowerSupplyTest(CTestDialog *ptrDialog)
+	//  RunPowerSupplyTest() - implements sequence for testing DC950 lamp voltage output
+	//	while adjusting variable power supply to AC test voltages: 
+	//	90, 115, 132, 254, 230, 180 volts AC.
+	//
+	//  The multimeter measures the lamp voltage each time 
+	//  and this routine determines whether voltage is within limits.
+	//  It returns NOT_DONE_YET each time through until
+	//  the full sequence has completed, at which point it returns PASS.
+	//	If lamp voltage is outside of limits at any point,
+	//  it returns FAIL.
+
+	int TestApp::RunPowerSupplyTest()
 	{
 #define NUM_TEST_VOLTAGES 6
 		int supplyVoltage;
-		int arrSupplyVoltage[NUM_TEST_VOLTAGES] = { 90, 115, 132, 254, 230, 180};		
+		int arrSupplyVoltage[NUM_TEST_VOLTAGES] = { 90, 115, 132, 254, 230, 180}; // Array of output AC test voltages 
 		float lampVoltage, errorVoltage, expectedVoltage, controlVoltage;
 		int testResult = PASS;
 
 		if (ptrDialog->subStepNumber == 0) {
-			if (!InitializeInterfaceBoard(ptrDialog)) return FAIL;
+			if (!InitializeInterfaceBoard()) return FAIL;
 			msDelay(100);
-			if (!SetInterfaceBoardPWM(ptrDialog, MAX_PWM)) return FAIL;
+			if (!SetInterfaceBoardPWM(MAX_PWM)) return FAIL;
 			msDelay(100);
 		}
 
@@ -74,13 +83,13 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 		if (ptrDialog->subStepNumber < 0) return FAIL;
 
 		supplyVoltage = arrSupplyVoltage[ptrDialog->subStepNumber];
-		if (!SetPowerSupplyVoltage(ptrDialog, supplyVoltage)) return FAIL;
+		if (!SetPowerSupplyVoltage(supplyVoltage)) return FAIL;
 
 		msDelay(500);
-		if (!ReadVoltage(ptrDialog, CONTROL_VOLTAGE, &controlVoltage)) return FAIL;
+		if (!ReadVoltage(CONTROL_VOLTAGE, &controlVoltage)) return FAIL;
 		expectedVoltage = controlVoltage * (float) 4.2;
 		msDelay(100);
-		if (!ReadVoltage(ptrDialog, LAMP, &lampVoltage)) return FAIL;
+		if (!ReadVoltage(LAMP, &lampVoltage)) return FAIL;
 		errorVoltage = getAbs(lampVoltage - expectedVoltage);
 		if (errorVoltage > AllowableLampVoltageError)
 			testResult = FAIL;
@@ -91,7 +100,7 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 		sprintf_s(strAddLog, MAXSTRING, "AC Sweep %d volt: MIN %.2f < %.2f < MAX %.2f:", supplyVoltage, minVoltage, lampVoltage, maxVoltage);
 		if (testResult == PASS) strcat_s(strAddLog, MAXSTRING, "    PASS\r\n");
 		else strcat_s(strAddLog, MAXSTRING, "    FAIL\r\n");
-		DisplayLog(strAddLog, ptrDialog);			
+		DisplayLog(strAddLog);			
 
 		char strMeasuredVoltage[MAXSTRING];
 		sprintf_s(strMeasuredVoltage, MAXSTRING, "%.2f", lampVoltage);
@@ -101,34 +110,50 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 
 		ptrDialog->subStepNumber++;
 		if (ptrDialog->subStepNumber >= NUM_TEST_VOLTAGES) {
-			SetPowerSupplyVoltage(ptrDialog, 120);
-			InitializeInterfaceBoard(ptrDialog);
+			SetPowerSupplyVoltage(120);
+			InitializeInterfaceBoard();
 			return (PASS);
 		}
 		else return NOT_DONE_YET;
 	}
 
 
-	// This routine executes the following sequence:
-	// 0) The PWM is set to 0, the relays are set to read the control voltage
-	// 1) The control voltage is measured, then relays are set to monitor lamp voltage
-	// 2) The lamp voltage is measured, the PWM is set to the next setpoint, and the relays are set to read control voltage
-	// 3) Steps 1) and 2) are repeated for 1,2,3,4,5 volts
-	// 4) The linearity error is calculated for each lamp voltage
-	// 5) The PWM is set to full and the relays are set to monitor lamp voltage
-	// 6) Lamp voltage is measured and the inhibit relay is turned on
-	// 7) Lamp voltage is measured, then the PWM is turned to 0
-	// 8) If any of the above steps fails, the failure is reported and the test is halted, otherwise it passes.
-
-	// DisplayLog(char *newString, ptrDialog);
-
-	int TestApp::RunRemoteTests(CTestDialog *ptrDialog)
+	// Ths routine tests three remote control features on the DC950:
+	// the 5V reference voltage output, 
+	// the remote pot voltage control input,
+	// and the remote relay inhibit input.
+	//
+	// For each test, the lamp voltage is measured 
+	// to ensure it is proportional to the pot input voltage. 
+	// This routine runs a different
+	// pot voltage from 0 to five volts each time through 
+	// until the test sequence is completed.
+	// 
+	// The first and last voltage in the sequence are repeated:
+	// 0 volts is tested twice so the 5V reference can be checked,
+	// and five volts is tested twice so the relay inhibit signal
+	// can be checked. 	
+	//
+	// The multimeter measures the lamp voltage each time 
+	// and this routine determines whether voltage is within limits.
+	//
+	// This routine returns NOT_DONE_YET each time through until
+	// the full sequence has completed, at which point it returns PASS.
+	// However, if lamp voltage is outside of limits at any point,
+	// the FAIL is returned.
+	int TestApp::RunRemoteTests()
 	{
 #define NUM_TEST_VALUES 8
 #define LAST_TEST (NUM_TEST_VALUES - 1)
 		char strAddLog[MAXSTRING];
 		int testPWM;
-		int PWMvalues[NUM_TEST_VALUES] = { 0, 0, 1243, 2486, 3729, 4972, 6215, 6215 };
+		// Array of PWM values to produce the desired remote pot voltage
+		// PWM = 1243 yields 1 volt approximately
+		// PWM = 2486 yields 2 volts
+		// PWM = 3729 yields 3 volts
+		// PWM = 4972 yields 4 volts
+		// PWM = 6215 yields 5 volts
+		int PWMvalues[NUM_TEST_VALUES] = { 0, 0, 1243, 2486, 3729, 4972, 6215, 6215 };  
 		float measuredVoltage, controlVoltage, expectedVoltage, errorVoltage, maxVoltage, minVoltage;
 		int testResult = PASS;
 
@@ -141,14 +166,13 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 		// and set the expected voltage to 5.0 volts
 		// so that VREF can be checked
 		if (ptrDialog->subStepNumber == 0) {
-			//expectedVoltageX10 = 50;
-			SetInhibitRelay(ptrDialog, FALSE);
+			SetInhibitRelay(FALSE);
 		}
 
 		msDelay(100);
-		if (!SetInterfaceBoardPWM(ptrDialog, testPWM)) return FAIL;		
+		if (!SetInterfaceBoardPWM(testPWM)) return FAIL;		
 
-		// For the first Remote test, check the 5V VREF voltage:
+		// FIRST TEST IN SEQUENCE: CHECK 5V VREF VOLTAGE OUTUPUT:
 		if (ptrDialog->subStepNumber == 0) 
 		{
 			msDelay(500);
@@ -157,23 +181,23 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 			minVoltage = expectedVoltage - AllowableVrefError;
 			maxVoltage = expectedVoltage + AllowableVrefError;	
 
-			if (!ReadVoltage(ptrDialog, VREF, &measuredVoltage)) return FAIL;
+			if (!ReadVoltage(VREF, &measuredVoltage)) return FAIL;
 			errorVoltage = getAbs(measuredVoltage - expectedVoltage);
 			if (errorVoltage > AllowableVrefError) testResult = FAIL;
 				
 			sprintf_s(strAddLog, MAXSTRING, "5V Reference:      MIN %.2f < %.2f < MAX %.2f:", minVoltage, measuredVoltage, maxVoltage);
 			if (testResult == PASS) strcat_s(strAddLog, MAXSTRING, "    PASS\r\n");
 			else strcat_s(strAddLog, MAXSTRING, "    FAIL\r\n");
-			DisplayLog(strAddLog, ptrDialog);			
+			DisplayLog(strAddLog);			
 		}
-		// Otherwise, check the LAMP voltage:
+		// TEST REMOTE POT CONTROL VOLTAGES 0-5 VOLTS:
 		else if (ptrDialog->subStepNumber < LAST_TEST) 
 		{
 			msDelay(500);
-			if (!ReadVoltage(ptrDialog, CONTROL_VOLTAGE, &controlVoltage)) return FAIL;
+			if (!ReadVoltage(CONTROL_VOLTAGE, &controlVoltage)) return FAIL;
 			expectedVoltage = controlVoltage * (float) 4.2;
 			msDelay(100);
-			if (!ReadVoltage(ptrDialog, LAMP, &measuredVoltage)) return FAIL;
+			if (!ReadVoltage(LAMP, &measuredVoltage)) return FAIL;
 			errorVoltage = getAbs(measuredVoltage - expectedVoltage);
 			if (errorVoltage > AllowableLampVoltageError)
 				testResult = FAIL;
@@ -183,14 +207,17 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 			sprintf_s(strAddLog, MAXSTRING, "Remote %d volt:      MIN %.2f < %.2f < MAX %.2f:", ptrDialog->subStepNumber-1, minVoltage, measuredVoltage, maxVoltage);
 			if (testResult == PASS) strcat_s(strAddLog, MAXSTRING, "    PASS\r\n");
 			else strcat_s(strAddLog, MAXSTRING, "    FAIL\r\n");
-			DisplayLog(strAddLog, ptrDialog);			
+			DisplayLog(strAddLog);			
 		}
+		// LAST TEST IN SEQUENCE - CHECK INHIBIT RELAY INPUT TO DC950.
+		// WITH POT CONTROL INPUT AT 5 VOLTS AND INHIBIT RELAY ON,
+		// LAMP SHOULD BE OFF:
 		else {
-			SetInhibitRelay(ptrDialog, TRUE);
+			SetInhibitRelay(TRUE);
 			msDelay(500);		
 
 			expectedVoltage = (float) 0.0;
-			if (!ReadVoltage(ptrDialog, LAMP, &measuredVoltage)) return FAIL;			
+			if (!ReadVoltage(LAMP, &measuredVoltage)) return FAIL;			
 			errorVoltage = getAbs(measuredVoltage - expectedVoltage);
 			if (errorVoltage > AllowableLampVoltageError)
 				testResult = FAIL;
@@ -199,7 +226,7 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 			sprintf_s(strAddLog, MAXSTRING, "Inhibit ON, lamp OFF:      %.2f volts  <   MAX %.2f:", measuredVoltage, maxVoltage);
 			if (testResult == PASS) strcat_s(strAddLog, MAXSTRING, "    PASS\r\n");
 			else strcat_s(strAddLog, MAXSTRING, "    FAIL\r\n");
-			DisplayLog(strAddLog, ptrDialog);
+			DisplayLog(strAddLog);
 		}
 
 
@@ -211,13 +238,14 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 
 		ptrDialog->subStepNumber++;
 		if (ptrDialog->subStepNumber >= NUM_TEST_VALUES) {
-			InitializeInterfaceBoard(ptrDialog);
+			InitializeInterfaceBoard();
 			return (PASS);
 		}
 		else return NOT_DONE_YET;
 	}
 
-	int TestApp::RunSpectrometerTest(BOOL filterIsOn, CTestDialog *ptrDialog)
+	// SPECTROMETER TEST SEQUENCE
+	int TestApp::RunSpectrometerTest(BOOL filterIsOn)
 	{
 		char strText[MAXSTRING];
 		int testResult = NOT_DONE_YET;		
@@ -227,24 +255,24 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 			int intPWM;
 			if (filterIsOn) intPWM = MAX_PWM;
 			else intPWM = MAX_PWM / 10;
-			if (!SetInterfaceBoardPWM(ptrDialog, intPWM)) return FAIL;	
+			if (!SetInterfaceBoardPWM(intPWM)) return FAIL;	
 			msDelay(100);
-			if (!SetInterfaceBoardActuatorOutput(ptrDialog, filterIsOn)) return FAIL;
+			if (!SetInterfaceBoardActuatorOutput(filterIsOn)) return FAIL;
 		}
 		else if (ptrDialog->subStepNumber == 1)
-			ActivateSpectrometer(ptrDialog);
+			ActivateSpectrometer();
 		else if (ptrDialog->subStepNumber == 2)
 			startMeasurement();
 		else if (ptrDialog->subStepNumber > MAXSECONDS) {
 			stopMeasurement();
-			DisplayText(ptrDialog, 3, "ERROR: Scan timeout");
+			DisplayText(3, "ERROR: Scan timeout");
 			return FAIL;
 		}
 		else if (spectrometerDataReady()) {
 			stopMeasurement();
-			DisplayText(ptrDialog, 3, "SUCCESS!! SCAN COMPLETED");	
+			DisplayText(3, "SUCCESS!! SCAN COMPLETED");	
 			
-			getSpectrometerData (ptrDialog, &wavelength, &minAmplitude, &peakIrradiance, &FWHM, &colorTemperature);
+			getSpectrometerData (&wavelength, &minAmplitude, &peakIrradiance, &FWHM, &colorTemperature);
 
 			testResult = PASS; // Assume success, change to FAIL if any of the following limits are exceeded:
 
@@ -261,7 +289,7 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 				sprintf_s(strText, MAXSTRING, "Wavelength filter closed:      MIN %.2f < %.2f < MAX %.2f:", MinClosedFilterWavelength, wavelength, MaxClosedFilterWavelength);
 				if (testResult == PASS) strcat_s(strText, MAXSTRING, "    PASS\r\n");
 				else strcat_s(strText, MAXSTRING, "    FAIL\r\n");	
-				DisplayLog(strText, ptrDialog);
+				DisplayLog(strText);
 
 				// IRRADIANCE CLOSED:
 				sprintf_s(strText, MAXSTRING, "%.2f", peakIrradiance);
@@ -274,7 +302,7 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 				sprintf_s(strText, MAXSTRING, "Irradiance filter closed:      MIN %.2f < %.2f < MAX %.2f:", MinClosedFilterIrradiance, peakIrradiance, MaxClosedFilterIrradiance);
 				if (testResult == PASS) strcat_s(strText, MAXSTRING, "    PASS\r\n");
 				else strcat_s(strText, MAXSTRING, "    FAIL\r\n");	
-				DisplayLog(strText, ptrDialog);
+				DisplayLog(strText);
 
 				// MIN_AMPLITUDE_CLOSED:
 				sprintf_s(strText, MAXSTRING, "%.2f", minAmplitude);
@@ -287,7 +315,7 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 				sprintf_s(strText, MAXSTRING, "Min amplitude filter closed:      MIN %.2f < %.2f:", MinClosedFilterIrradiance, minAmplitude);
 				if (testResult == PASS) strcat_s(strText, MAXSTRING, "    PASS\r\n");
 				else strcat_s(strText, MAXSTRING, "    FAIL\r\n");	
-				DisplayLog(strText, ptrDialog);
+				DisplayLog(strText);
 
 				// FWHM_CLOSED:
 				sprintf_s(strText, MAXSTRING, "%.2f", FWHM);
@@ -300,7 +328,7 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 				sprintf_s(strText, MAXSTRING, "FWHM filter closed:      MIN %.2f < %.2f < MAX %.2f:", MinClosedFilterFWHM, peakIrradiance, MaxClosedFilterFWHM);
 				if (testResult == PASS) strcat_s(strText, MAXSTRING, "    PASS\r\n");
 				else strcat_s(strText, MAXSTRING, "    FAIL\r\n");	
-				DisplayLog(strText, ptrDialog);
+				DisplayLog(strText);
 
 				// COLOR TEMPERATURE CLOSED:
 				sprintf_s(strText, MAXSTRING, "%.2f", colorTemperature);
@@ -313,7 +341,7 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 				sprintf_s(strText, MAXSTRING, "Color Temp closed:      MIN %.2f < %.2f < MAX %.2f:", MinClosedFilterColorTemp, colorTemperature, MaxClosedFilterColorTemp);
 				if (testResult == PASS) strcat_s(strText, MAXSTRING, "    PASS\r\n");
 				else strcat_s(strText, MAXSTRING, "    FAIL\r\n");	
-				DisplayLog(strText, ptrDialog);
+				DisplayLog(strText);
 			}
 			// SPECTROMETER TEST FOR FILTER OPEN:
 			else {
@@ -328,7 +356,7 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 				sprintf_s(strText, MAXSTRING, "Irradiance filter open:      MIN %.2f < %.2f < MAX %.2f:", MinClosedFilterIrradiance, peakIrradiance, MaxClosedFilterIrradiance);
 				if (testResult == PASS) strcat_s(strText, MAXSTRING, "    PASS\r\n");
 				else strcat_s(strText, MAXSTRING, "    FAIL\r\n");	
-				DisplayLog(strText, ptrDialog);
+				DisplayLog(strText);
 
 				// COLOR TEMPERATURE OPEN:
 				sprintf_s(strText, MAXSTRING, "%.2f", colorTemperature);
@@ -341,12 +369,12 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 				sprintf_s(strText, MAXSTRING, "Color Temp open:      MIN %.2f < %.2f < MAX %.2f:", MinClosedFilterColorTemp, colorTemperature, MaxClosedFilterColorTemp);
 				if (testResult == PASS) strcat_s(strText, MAXSTRING, "    PASS\r\n");
 				else strcat_s(strText, MAXSTRING, "    FAIL\r\n");	
-				DisplayLog(strText, ptrDialog);
+				DisplayLog(strText);
 			}
 		}
 		else {
 			sprintf_s(strText, MAXSTRING, "Scan time: %d seconds", ptrDialog->subStepNumber);
-			DisplayText(ptrDialog, 3, strText);
+			DisplayText(3, strText);
 			testResult = NOT_DONE_YET;
 		}
 		ptrDialog->subStepNumber++;
@@ -354,22 +382,28 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 	}
 
 
-	int TestApp::TTL_inputTest(CTestDialog *ptrDialog){
-		if (!SetInterfaceBoardActuatorOutput(ptrDialog, FILTER_CLOSED)) return (FAIL);
+	// CHECK TTL FAULT SIGNAL - OPEN AND CLOSE ACTUATOR A FEW TIMES 
+	// AND MAKE SURE TTL OUTPUT REMAINS HIGH:
+	int TestApp::TTL_inputTest(){
+		if (!SetInterfaceBoardActuatorOutput(FILTER_CLOSED)) return (FAIL);
 		msDelay(300);
-		if (!SetInterfaceBoardActuatorOutput(ptrDialog, FILTER_OPEN)) return (FAIL);
+		if (!SetInterfaceBoardActuatorOutput(FILTER_OPEN)) return (FAIL);
 		msDelay(300);
-		if (!SetInterfaceBoardActuatorOutput(ptrDialog, FILTER_CLOSED)) return (FAIL);
+		if (!SetInterfaceBoardActuatorOutput(FILTER_CLOSED)) return (FAIL);
 		msDelay(300);
-		if (!SetInterfaceBoardActuatorOutput(ptrDialog, FILTER_OPEN)) return (FAIL);
+		if (!SetInterfaceBoardActuatorOutput(FILTER_OPEN)) return (FAIL);
 		msDelay(300);
-		if (!SetInterfaceBoardActuatorOutput(ptrDialog, FILTER_CLOSED)) return (FAIL);		
+		if (!SetInterfaceBoardActuatorOutput(FILTER_CLOSED)) return (FAIL);		
 		return PASS;
 	}	
 	  
 
-
-	int TestApp::Execute(int stepNumber, CTestDialog *ptrDialog) {
+	// EXECUTE(): THS ROUTINE IS THE MAIN FUNCTION WHICH EXECUTES ALL TESTS.
+	// It is called by Testhandler() in DC950TestDialog. 
+	// The global variable "stepNumber" determines which test in the sequence
+	// is executed. 
+	// 
+	int TestApp::Execute(int stepNumber) {
 
 		int testStatus = PASS; 			
 		float fltVoltage;		
@@ -379,16 +413,14 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 		
 		switch (stepNumber) {
 		case 0:			// 0 Start Up
-			testStatus = SystemStartUp(ptrDialog);
+			testStatus = SystemStartUp();
 			break;
 
 		case 1:			// 1 SCAN BARCODE
 			msDelay(100);			
-			SetPowerSupplyVoltage(ptrDialog, 120);
+			SetPowerSupplyVoltage(120);
 			ptrDialog->m_BarcodeEditBox.GetWindowText((LPTSTR)chrSerialNumber, MAXSTRING);
-			//arrTestLog[0] = '\0'; 
-			//DisplayLog(arrTestLog, ptrDialog);
-			ClearLog(ptrDialog);
+			ClearLog();
 			
 			if (0 == strcmp(chrSerialNumber, "")) {
 				testStatus = FAIL;
@@ -415,99 +447,99 @@ HANDLE handleInterfaceBoard = NULL, handleHPmultiMeter = NULL, handleACpowerSupp
 
 		case 2:			// 2 HI POT TEST	
 			testStatus = testStep[stepNumber].Status;
-			DisplayTestEditBox(ptrDialog, HI_POT_EDIT, testStatus);
-			if (testStatus == PASS) DisplayLog("Hi Pot test:    PASS\r\n", ptrDialog);
-			else DisplayLog("Hi Pot test:    FAIL\r\n", ptrDialog);
+			DisplayTestEditBox(HI_POT_EDIT, testStatus);
+			if (testStatus == PASS) DisplayLog("Hi Pot test:    PASS\r\n");
+			else DisplayLog("Hi Pot test:    FAIL\r\n");
 			writeTestResultsToSpreadsheet(HI_POT, testStatus, NULL);
 			break;
 
 		case 3:			// 3 GROUND BOND TEST		
 			testStatus = testStep[stepNumber].Status;
-			DisplayTestEditBox(ptrDialog, GROUND_BOND_EDIT, testStatus);
-			if (testStatus == PASS) DisplayLog("Ground Bond test:    PASS\r\n", ptrDialog);
-			else DisplayLog("Ground Bond test:    FAIL\r\n", ptrDialog);
+			DisplayTestEditBox(GROUND_BOND_EDIT, testStatus);
+			if (testStatus == PASS) DisplayLog("Ground Bond test:    PASS\r\n");
+			else DisplayLog("Ground Bond test:    FAIL\r\n");
 			writeTestResultsToSpreadsheet(GROUND_BOND, testStatus, NULL);
 			break;
 		case 4:			// 4 POT TEST LOW = LAMP OFF	
-			ReadVoltage(ptrDialog, LAMP, &fltVoltage);
+			ReadVoltage(LAMP, &fltVoltage);
 			if (fltVoltage  > AllowableLampVoltageError) testStatus = FAIL;
 			else testStatus = PASS;
-			DisplayTestEditBox(ptrDialog, POT_LOW_EDIT, testStatus);
+			DisplayTestEditBox(POT_LOW_EDIT, testStatus);
 
 			maxVoltage = AllowableLampVoltageError;		
 			sprintf_s(strTest, MAXSTRING, "Pot turned OFF: MIN 0  <  %.2f volts  <   MAX %.2f:", fltVoltage, maxVoltage);
 			if (testStatus == PASS) strcat_s (strTest, MAXSTRING, "    PASS\r\n");
 			else strcat_s (strTest, MAXSTRING, "    FAIL\r\n");
-			DisplayLog(strTest, ptrDialog);			
+			DisplayLog(strTest);			
 			writeTestResultsToSpreadsheet(LAMP_OFF, testStatus, NULL);
 			break;
 		case 5:			// 5 POT TEST HIGH = LAMP ON
-			ReadVoltage(ptrDialog, LAMP, &fltVoltage);
+			ReadVoltage(LAMP, &fltVoltage);
 			if (getAbs(fltVoltage - (float) 21.0)  > AllowableLampVoltageError) testStatus = FAIL;
 			else testStatus = PASS;
-			DisplayTestEditBox(ptrDialog, POT_HIGH_EDIT, testStatus);
+			DisplayTestEditBox(POT_HIGH_EDIT, testStatus);
 
 			minVoltage = (float) 21.0 - AllowableLampVoltageError;
 			maxVoltage = (float) 21.0 + AllowableLampVoltageError;			
 			sprintf_s(strTest, MAXSTRING, "Pot at FULL: MIN %.2f  <  %.2f volts  <  MAX %.2f:", minVoltage, fltVoltage, maxVoltage);
 			if (testStatus == PASS) strcat_s (strTest, MAXSTRING, "    PASS\r\n");
 			else strcat_s (strTest, MAXSTRING, "    FAIL\r\n");
-			DisplayLog(strTest, ptrDialog);
+			DisplayLog(strTest);
 			writeTestResultsToSpreadsheet(LAMP_ON, testStatus, NULL);
 			break;
 		case 6:			// 6 REMOTE TEST SETUP		
 			break;
 		case 7:			// 7 REMOTE POT TEST
-			testStatus = RunRemoteTests(ptrDialog);
-			DisplayTestEditBox(ptrDialog, REMOTE_EDIT, testStatus);								
+			testStatus = RunRemoteTests();
+			DisplayTestEditBox(REMOTE_EDIT, testStatus);								
 			break;
 
 		case 8:			// 8 AC POWER SWEEP
-			testStatus = RunPowerSupplyTest(ptrDialog);
-			DisplayTestEditBox(ptrDialog, AC_SWEEP_EDIT, testStatus);	
-			DisplayTestEditBox(ptrDialog, SIGNAL_EDIT, testStatus);
+			testStatus = RunPowerSupplyTest();
+			DisplayTestEditBox(AC_SWEEP_EDIT, testStatus);	
+			DisplayTestEditBox(SIGNAL_EDIT, testStatus);
 			break;
 
 		case 9:			// 9 ACTUATOR TTL INPUT CHECK
-			testStatus = TTL_inputTest(ptrDialog);
-			DisplayTestEditBox(ptrDialog, ACTUATOR_EDIT, testStatus);
-			if (testStatus == PASS) DisplayLog("TTL check:    PASS\r\n", ptrDialog);
-			else DisplayLog("TTL check:    FAIL\r\n", ptrDialog);
+			testStatus = TTL_inputTest();
+			DisplayTestEditBox(ACTUATOR_EDIT, testStatus);
+			if (testStatus == PASS) DisplayLog("TTL check:    PASS\r\n");
+			else DisplayLog("TTL check:    FAIL\r\n");
 			writeTestResultsToSpreadsheet(TTL_OUT, testStatus, NULL);
 			break;
 
 		case 10:			// 11 SPECTROMETER TEST - FILTER CLOSED
-			testStatus = RunSpectrometerTest(FILTER_CLOSED, ptrDialog);
-			if (testStatus !=  NOT_DONE_YET) InitializeInterfaceBoard(ptrDialog);
-			DisplayTestEditBox(ptrDialog, FILTER_ON_EDIT, testStatus);
+			testStatus = RunSpectrometerTest(FILTER_CLOSED);
+			if (testStatus !=  NOT_DONE_YET) InitializeInterfaceBoard();
+			DisplayTestEditBox(FILTER_ON_EDIT, testStatus);
 			break;
 
 		case 11:			// 11 SPECTROMETER TEST - FILTER OPEN
-			testStatus = RunSpectrometerTest(FILTER_OPEN, ptrDialog);
-			if (testStatus !=  NOT_DONE_YET) InitializeInterfaceBoard(ptrDialog);
-			DisplayTestEditBox(ptrDialog, FILTER_OFF_EDIT, testStatus);
+			testStatus = RunSpectrometerTest(FILTER_OPEN);
+			if (testStatus !=  NOT_DONE_YET) InitializeInterfaceBoard();
+			DisplayTestEditBox(FILTER_OFF_EDIT, testStatus);
 			break;
 			
 		case 12:		// 12 TEST COMPLETE
 			writeTestResultsToSpreadsheet(FINAL_RESULT, PASS, NULL);			
-			SetPowerSupplyVoltage(ptrDialog, 120);
+			SetPowerSupplyVoltage(120);
 			resetTestData();
-			resetDisplays(ptrDialog);
+			resetDisplays();
 			testStatus = PASS;
-			DisplayTestEditBox(ptrDialog, RESULT_EDIT, testStatus);
-			InitializeInterfaceBoard(ptrDialog);
-			DisplayLog("UNIT PASSED\r\n", ptrDialog);
+			DisplayTestEditBox(RESULT_EDIT, testStatus);
+			InitializeInterfaceBoard();
+			DisplayLog("UNIT PASSED\r\n");
 			break;
 
 		case 13:		// 13 UNIT FAILED
 			writeTestResultsToSpreadsheet(FINAL_RESULT, FAIL, NULL);			
-			SetPowerSupplyVoltage(ptrDialog, 120);
+			SetPowerSupplyVoltage(120);
 			resetTestData();
-			resetDisplays(ptrDialog);
+			resetDisplays();
 			testStatus = FAIL;
-			DisplayTestEditBox(ptrDialog, RESULT_EDIT, testStatus);
-			InitializeInterfaceBoard(ptrDialog);
-			DisplayLog("UNIT FAILED\r\n", ptrDialog);
+			DisplayTestEditBox(RESULT_EDIT, testStatus);
+			InitializeInterfaceBoard();
+			DisplayLog("UNIT FAILED\r\n");
 		default:
 			break;
 		}
